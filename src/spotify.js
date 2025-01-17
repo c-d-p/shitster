@@ -7,7 +7,7 @@ module.exports = {
         constructor() {
             this.spotifyApi = new SpotifyWebApi({
                 clientId: '99be5860d7c540539595be41bf31e5a3',
-                clientSecret: '2c0092ac0b6e40faad82e98bf419fb72',
+                clientSecret: '<secret goes here>',
                 redirectUri: 'http://localhost:3000/callback'
             });
     
