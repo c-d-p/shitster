@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="css/styles.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script>
+            var index = 0;
+            var currentDeck = [];
+            var playbackState = true; // true for playing, false for not
+
+            function reveal() {
+                $.post('/pause');
+                $("#active-song-page").hide();
+                $("#answer-page").show();
+
+                if (index+1 >= currentDeck.length) {
+                    $("#title-box").text("End of deck");
+                    $("#artist-box").text("");
+                    $("#year-box").text("");
+                } else {
+                    $("#title-box").text(currentDeck[index].title);
+                    $("#artist-box").text(currentDeck[index].artist);
+                    $("#year-box").text(currentDeck[index].details.year);
+                    $("#img-box").attr("src", currentDeck[index].details.image[0].url);
+
+                    index++;
+                }
+            }
+
+            async function next() {
+                $("#answer-page").hide();
+                $("#active-song-page").show();
+                track = currentDeck[index];
+
+                $("#title-box").text = "";
+                $("#artist-box").text = "";
+                $("#year-box").text = "";
+
+                track.ID = await $.post('/get-song-id', { title: track.title, artist: track.artist });
+                if (!track.ID) {
+                    console.log(`SONG COULDN'T BE FOUND: ${track}`);
+                    currentDeck.splice(index, index);
+                }
+                track.ID = track.ID.trackID;
+                track.details = await $.post('/get-song-details', { trackID: track.ID });
+                track.details.year = track.details.year.substring(0,4);
+                await $.post('/play-song', { trackID: track.ID });
+            }
+
+            $(document).ready(async () => {
+                // set currentdeck to be our passed-in instance from node
+                rsp = await $.get("/get-deck");
+                mode = rsp.mode;
+                currentDeck = rsp.currentDeck;
+
+                // if we are using a playlist, get the title and artist and make the object just {title: title, artist: artist}.
+                // this is kinda stupid because if we keep the og object it contains many of the details we need
+                // but, this way the objects match if using a deck or a playlist sooo...
+                if (mode == "public-playlist") {
+                    currentDeck.forEach((song, index) => {
+                        currentDeck[index] = { title: song.track.name, artist: song.track.album.artists[0].name };
+                    });
+                }
+
+                for (let i = currentDeck.length - 1; i > 0; i--) {
+                    // Generate random index 
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+                }
+                $("#next-btn").click(next);
+                $("#reveal-btn").click(reveal);
+                $("#play-pause-btn").click(() => {
+                    if (playbackState) {
+                        $.post('/pause');
+                        playbackState = false;
+                    } else if (!playbackState) {
+                        $.post('/resume');
+                        playbackState = true;
+                    }
+                });
+
+                // start first song
+                next();
+            });
+        </script>
+    </head>
+    <body>
+        <div id="active-song-page">
+            <div id="btn-flexbox" class="d-flex justify-content-center align-items-center vh-100 flex-column">
+                <div id="play-pause-btn" class="btn btn-primary mb-3">Play/Pause</div>
+                <div id="reveal-btn" class="btn btn-secondary">Reveal</div>
+            </div>
+        </div>
+
+        <div id="answer-page">
+            <div id="answer-flexbox" class="d-flex justify-content-center align-items-center vh-100 flex-column">
+                <h2 class="d-flex flex-column align-items-center mb-5">
+                    <img id="img-box" width=240 height=240 class="mb-2"></img>
+                    <div id="title-box" class="mb-2"></div>
+                    <div id="artist-box" class="mb-2"></div>
+                    <div id="year-box" class="mb-2"></div>
+                </h2>
+                <div id="next-btn" class="btn btn-primary">Next</div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+</html>

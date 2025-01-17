@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script>
+            function start() {
+                // here we load the default deck (or given url), login, and redirect
+                let deck = $("#playlist-url").val();
+                if (deck.startsWith('https://')) // if we have a URL (i.e. spotify playlist, get the ID)
+                {
+                    // ex. https://open.spotify.com/playlist/3bJ70Wlk70Q2d9kp8QRenI?si=083d57b2935140ae
+                    // 3bJ70Wlk70Q2d9kp8QRenI is id
+                    console.log("playlist, not deck");
+                    deck = deck.split('?')[0];
+                    deck = deck.split('/')[4]; // we should have a spotify playlist id at this point. use it to load a deck.
+                    console.log(deck);
+                    $.post("/load-deck", {deckName: deck, mode: "public-playlist"}).then( () => {window.location.replace('/main');});
+                } else if (deck == null || deck == "") {
+                    $.post("/load-deck", {deckName: "cdp-test", mode: "deck"},).then( () => {window.location.replace('/main');});
+                }
+
+            }
+            $(document).ready(() => {
+                let searchParams = new URLSearchParams(window.location.search);
+                if (!searchParams.has('logged')) {
+                    window.location.replace('/login');
+                }
+                $("#start-btn").click(start);
+            });
+        </script>
+    </head>
+    <body>
+        <button id="start-btn">Start</button>
+        <button>Login</button>
+        <input id="playlist-url">Playlist URL: (none for default deck)</input>
+        <button>Import Deck</button>
+    </body>
+</html>
